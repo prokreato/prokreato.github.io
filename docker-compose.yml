@@ -1,0 +1,184 @@
+version: '2'
+services:
+  # VPN container
+  # All containers force their network traffic through this container
+  pia:
+    container_name: mullvad-vpn
+    image: qmcgaw/private-internet-access:latest
+    restart: unless-stopped
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun
+    network_mode: bridge
+    ports:
+     # Host:Container/tcp|udp
+     # If not specified it will be TCP
+     # Transmission
+     - 9091:9091
+     # Radarr.1080p.or.lower
+     - 27702:27702
+     # Radarr.1080p.Max.Quality
+     - 7879:7879
+     # Radarr.4k 
+     - 7880:7880
+     # Sonarr.1080p.or.lower
+     - 8989:8989
+     # Sonarr.1080p.Max.Quality
+     - 8990:8990
+     # Sonarr.4k
+     - 8991:8991
+     # Jackett
+     - 9117:9117
+     # Add more ports here as needed
+    environment:
+      - USER=XXX
+      - VPNSP=mullvad
+      - COUNTRY=Switzerland
+      - CITY=Zurich
+      - OWNED=yes
+      - FIREWALL=on
+      - FIREWALL_VPN_INPUT_PORTS=14239,27702,59530,59726,59913
+      - FIREWALL_INPUT_PORTS=9091,27702,7879,7880,8989,8990,8991,9117
+
+  # Transmission
+  # Runs on port 9091
+  transmission:
+    container_name: transmission
+    image: linuxserver/transmission:latest
+    restart: unless-stopped
+    network_mode: service:pia
+    environment:
+     - PUID=1000
+     - PGID=1000
+     - TZ=Europe/Berlin
+    volumes:
+     - /home/pi/dockerconfig/transmission:/config
+     - /home/pi/iso:/downloads
+
+  # Radarr
+  # For downloading movies
+
+  radarr.1080p.or.lower:
+    container_name: radarr.1080p.or.lower
+    image: linuxserver/radarr:version-3.0.0.4235
+    restart: unless-stopped
+    network_mode: service:pia
+    environment:
+     - PUID=1000
+     - PGID=1000
+     - TZ=Europe/Berlin
+     - UMASK_SET=022
+    volumes:
+     - /home/pi/dockerconfig/radarr.1080p.or.lower:/config
+     - "/home/pi/drive/batzz/1080p or Lower/Movies (1080p or Lower):/tv"
+     - /home/pi/iso:/downloads
+
+  radarr.1080p.max.quality:
+    container_name: radarr.1080p.max.quality
+    image: linuxserver/radarr:version-3.0.0.4235
+    restart: unless-stopped
+    network_mode: service:pia
+    environment:
+     - PUID=1000
+     - PGID=1000
+     - TZ=Europe/Berlin
+     - UMASK_SET=022
+    volumes:
+     - /home/pi/dockerconfig/radarr.1080p.max.quality:/config
+     - "/home/pi/drive/batzz/1080p Max Quality/Movies (1080p Max Quality):/movies"
+     - /home/pi/iso:/downloads
+
+  radarr.4k:
+    container_name: radarr.4k
+    image: linuxserver/radarr:version-3.0.0.4235
+    restart: unless-stopped
+    network_mode: service:pia
+    environment:
+     - PUID=1000
+     - PGID=1000
+     - TZ=Europe/Berlin
+     - UMASK_SET=022
+    volumes:
+     - /home/pi/dockerconfig/radarr.4k:/config
+     - "/home/pi/drive/batzz/4k/Movies (4k):/movies"
+     - /home/pi/iso:/downloads
+
+  # Sonarr
+  # For downloading TV shows
+
+  sonarr.1080p.or.lower:
+    container_name: sonarr.1080p.or.lower
+    image: linuxserver/sonarr:version-3.0.4.1024
+    restart: unless-stopped
+    network_mode: service:pia
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/Berlin
+      - UMASK_SET=022
+    volumes:
+      - /home/pi/dockerconfig/sonarr.1080p.or.lower:/config
+      - "/home/pi/drive/batzz/1080p or Lower/TV Shows (1080p or Lower):/tv"
+      - /home/pi/iso:/downloads
+   
+  sonarr.1080p.max.quality:
+    container_name: sonarr.1080p.max.quality
+    image: linuxserver/sonarr:version-3.0.4.1024
+    restart: unless-stopped
+    network_mode: service:pia
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/Berlin
+      - UMASK_SET=022
+    volumes:
+      - /home/pi/dockerconfig/sonarr.max.quality:/config
+      - "/home/pi/drive/batzz/1080p Max Quality/TV Shows (1080p Max Quality):/tv"
+      - /home/pi/iso:/downloads
+      
+  sonarr.4k:
+    container_name: sonarr.4k
+    image: linuxserver/sonarr:version-3.0.4.1024
+    restart: unless-stopped
+    network_mode: service:pia
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/Berlin
+      - UMASK_SET=022
+    volumes:
+      - /home/pi/dockerconfig/sonarr.4k:/config
+      - "/home/pi/drive/batzz/4k/TV Shows (4k):/tv"
+      - /home/pi/iso:/downloads
+
+  # Jackett
+  # Indexer for Sonarr and Radarr
+  # Runs on port 9117
+  jackett:
+    container_name: jackett
+    image: linuxserver/jackett:latest
+    restart: unless-stopped
+    network_mode: service:pia
+    environment:
+     - PUID=1000
+     - PGID=1000
+     - TZ=Europe/Berlin
+     - UMASK_SET=022
+    volumes:
+     - /home/pi/dockerconfig/jackett:/config
+     - /home/pi/iso:/downloads
+
+# JDownloader
+  # For downloading anything
+  # Make sure to enter the container and run the below command
+  # configure EMAIL PASSWORD
+
+  jdownloader:
+    container_name: jdownloader
+    image: jaymoulin/jdownloader
+    restart: always
+    network_mode: service:pia
+    volumes:
+     - /home/pi/dockerconfig/jdownloader/downloads:/downloads
+     - /home/pi/dockerconfig/jdownloader:/opt/JDownloader/cfg
